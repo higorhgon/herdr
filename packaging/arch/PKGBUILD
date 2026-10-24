@@ -1,0 +1,106 @@
+# Maintainer: Higor Henrique <higorlhp2@gmail.com>
+#
+# The latest stable herdr release with this fork's changes on top: unfocused
+# pane dimming like Ghostty's splits and the Omarchy theme. Each build checks
+# out the newest vX.Y.Z tag upstream and cherry-picks the commits only the fork
+# has, so a new herdr release arrives on the next build with nothing to do
+# here. A fork commit that no longer applies stops the build in prepare().
+# It replaces the herdr package Omarchy installs.
+
+pkgname=herdr-git
+_srcname=herdr
+_fork=herdr-fork
+# The fork branch carrying the changes, based on a release tag. The fork's
+# master follows upstream master, which is ahead of the releases.
+_branch=omarchy
+pkgver=0.9.5.r1.g0000000
+pkgrel=1
+pkgdesc="Gerenciador de workspaces no terminal para agentes de código, com dimming dos panes e tema do Omarchy"
+arch=('x86_64')
+url="https://github.com/higorhgon/herdr"
+license=('Apache-2.0')
+depends=('gcc-libs' 'glibc')
+makedepends=('git' 'rust')
+optdepends=('libnotify: notificações do sistema (notify-send)')
+provides=('herdr')
+conflicts=('herdr' 'herdr-bin')
+# The vendored libghostty-vt needs exactly Zig 0.16.0, which Arch may not ship
+# at any given time. This is the official build, repackaged on PyPI with a
+# stable checksum.
+_zig=0.16.0
+_zigwheel="ziglang-${_zig}-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.musllinux_1_1_x86_64.whl"
+source=("${_srcname}::git+https://github.com/herdrdev/herdr.git"
+        "${_fork}::git+${url}.git#branch=${_branch}"
+        "https://files.pythonhosted.org/packages/3e/ed/7b79023aa27ceb5d461ecf761181e7c33c57bbc1a6256a39535d1c7083d2/${_zigwheel}")
+noextract=("${_zigwheel}")
+sha256sums=('SKIP'
+            'SKIP'
+            '9fcda73f62b851dd72a54b710ad40a209896db14cfb13649e62191243556342b')
+options=('!lto')
+
+# Newest stable release tag upstream; previews are tagged preview-*
+_release() {
+	git -C "${srcdir}/${_srcname}" tag --list 'v*' --sort=-v:refname |
+		grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1
+}
+
+pkgver() {
+	cd "${_srcname}"
+	local _tag
+	_tag=$(_release)
+	printf "%s.r%s.g%s" "${_tag#v}" \
+		"$(git rev-list --count "${_tag}..HEAD")" \
+		"$(git -C "${srcdir}/${_fork}" rev-parse --short HEAD)"
+}
+
+prepare() {
+	mkdir -p zig
+	bsdtar -xf "${_zigwheel}" -C zig
+	chmod +x zig/ziglang/zig
+
+	cd "${_srcname}"
+	local _tag
+	_tag=$(_release)
+	git checkout --quiet --detach "${_tag}"
+
+	# The fork's own commits: those no upstream branch or tag reaches
+	git fetch --quiet "${srcdir}/${_fork}" "${_branch}"
+	local _commits
+	mapfile -t _commits < <(git rev-list --reverse --no-merges FETCH_HEAD --not --tags --remotes=origin)
+	if ((${#_commits[@]})); then
+		git -c user.name=makepkg -c user.email=makepkg@localhost \
+			cherry-pick --allow-empty --keep-redundant-commits "${_commits[@]}"
+	fi
+
+	export RUSTUP_TOOLCHAIN=stable
+	cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+
+	# Zig packages download here, so build() runs offline
+	export ZIG_GLOBAL_CACHE_DIR="${srcdir}/zig-cache"
+	cd vendor/libghostty-vt
+	"${srcdir}/zig/ziglang/zig" build --fetch=all
+}
+
+build() {
+	cd "${_srcname}"
+	export RUSTUP_TOOLCHAIN=stable
+	export CARGO_TARGET_DIR=target
+	export ZIG="${srcdir}/zig/ziglang/zig"
+	export ZIG_GLOBAL_CACHE_DIR="${srcdir}/zig-cache"
+	cargo build --frozen --release
+
+	mkdir -p completions
+	for _shell in bash fish zsh; do
+		target/release/herdr completion "$_shell" >"completions/$_shell"
+	done
+}
+
+package() {
+	cd "${_srcname}"
+	install -Dm755 target/release/herdr "$pkgdir/usr/bin/herdr"
+	install -Dm644 completions/bash "$pkgdir/usr/share/bash-completion/completions/herdr"
+	install -Dm644 completions/fish "$pkgdir/usr/share/fish/vendor_completions.d/herdr.fish"
+	install -Dm644 completions/zsh "$pkgdir/usr/share/zsh/site-functions/_herdr"
+	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+	install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}
