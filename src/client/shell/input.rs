@@ -348,6 +348,7 @@ impl ClientShellState {
                     kind: crate::terminal_theme::DefaultColorKind::Background,
                     color,
                 } => {
+                    self.host_colors.background = Some(color);
                     if self.host_background != Some(color) {
                         self.host_background = Some(color);
                         outcome.repaint = true;
@@ -364,10 +365,23 @@ impl ClientShellState {
                         }
                     }
                 }
-                RawInputEvent::HostDefaultColor { .. }
-                | RawInputEvent::HostPaletteColors { .. }
-                | RawInputEvent::HostCellSizeReport { .. }
-                | RawInputEvent::Unsupported => {}
+                RawInputEvent::HostDefaultColor {
+                    kind: crate::terminal_theme::DefaultColorKind::Foreground,
+                    color,
+                } => {
+                    outcome.repaint |= self.config.unfocused_pane_dim.is_enabled()
+                        && self.host_colors.foreground != Some(color);
+                    self.host_colors.foreground = Some(color);
+                }
+                RawInputEvent::HostPaletteColors { colors } => {
+                    let dimming = self.config.unfocused_pane_dim.is_enabled();
+                    for (index, color) in colors {
+                        let slot = &mut self.host_colors.palette[usize::from(index)];
+                        outcome.repaint |= dimming && *slot != Some(color);
+                        *slot = Some(color);
+                    }
+                }
+                RawInputEvent::HostCellSizeReport { .. } | RawInputEvent::Unsupported => {}
             }
             self.reconcile_input_source();
         }

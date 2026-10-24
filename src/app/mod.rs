@@ -365,6 +365,13 @@ pub(crate) fn client_palette_from_config(config: &Config) -> state::Palette {
     resolve_effective_theme(&runtime, None).0
 }
 
+pub(crate) fn client_palette_for_host(
+    runtime: &state::ThemeRuntimeConfig,
+    appearance: Option<crate::terminal_theme::HostAppearance>,
+) -> state::Palette {
+    resolve_effective_theme(runtime, appearance).0
+}
+
 pub(crate) fn client_palette_for_appearance(
     runtime: &state::ThemeRuntimeConfig,
     appearance: crate::terminal_theme::HostAppearance,
@@ -603,6 +610,16 @@ impl App {
             }) {
                 tracing::warn!(err = %err, "failed to spawn agent manifest check thread");
             }
+        }
+
+        if policy.persist_session {
+            let omarchy_tx = event_tx.clone();
+            crate::omarchy::watch_theme("herdr-omarchy-theme", move || {
+                !matches!(
+                    omarchy_tx.try_send(AppEvent::OmarchyThemeChanged),
+                    Err(mpsc::error::TrySendError::Closed(_))
+                )
+            });
         }
 
         let last_focus = state.active.and_then(|idx| {

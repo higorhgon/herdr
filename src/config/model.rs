@@ -978,6 +978,13 @@ pub struct UiConfig {
     pub pane_scrollbars: bool,
     /// Keep split panes visually separated instead of sharing divider borders. Default: true.
     pub pane_gaps: bool,
+    /// Opacity of unfocused split panes, like Ghostty's unfocused-split-opacity: their
+    /// colors fade toward unfocused_pane_fill by the rest. Clamped to 0.15..=1; 1 turns
+    /// dimming off. Default: 1.
+    pub unfocused_pane_opacity: f32,
+    /// Color unfocused panes fade toward, like Ghostty's unfocused-split-fill. Empty uses
+    /// the terminal background. Default: "".
+    pub unfocused_pane_fill: String,
     /// Show agent labels in split pane borders when no manual pane label is set. Default: false.
     pub show_agent_labels_on_pane_borders: bool,
     /// Hide the tab row when the workspace has one tab. Default: false.
@@ -1217,6 +1224,8 @@ impl Default for UiConfig {
             pane_outer_borders: true,
             pane_scrollbars: true,
             pane_gaps: true,
+            unfocused_pane_opacity: 1.0,
+            unfocused_pane_fill: String::new(),
             show_agent_labels_on_pane_borders: false,
             hide_tab_bar_when_single_tab: false,
             tab_bar_position: TabBarPositionConfig::Top,
@@ -1532,9 +1541,13 @@ status_indicators = "symbols"
         );
         assert!(default_config.ui.tab_bar_right.is_empty());
         assert_eq!(default_config.ui.tab_bar_right_separator, " ");
+        assert_eq!(default_config.ui.unfocused_pane_opacity, 1.0);
+        assert!(default_config.ui.unfocused_pane_fill.is_empty());
 
-        let toml = r#"
+        let toml = r##"
 [ui]
+unfocused_pane_opacity = 0.7
+unfocused_pane_fill = "#11111b"
 pane_borders = "always"
 pane_outer_borders = false
 pane_scrollbars = false
@@ -1550,7 +1563,7 @@ tab_bar_right = [
   { type = "command", command = "status.sh", interval_seconds = 10, timeout_seconds = 3 },
 ]
 tab_bar_right_separator = " · "
-"#;
+"##;
         let config: Config = toml::from_str(toml).unwrap();
         assert_eq!(config.ui.pane_borders, PaneBordersConfig::Always);
         assert!(!config.ui.pane_outer_borders);
@@ -1565,6 +1578,12 @@ tab_bar_right_separator = " · "
             TabBarRightEntryConfig::Hostname
         ));
         assert_eq!(config.ui.tab_bar_right_separator, " · ");
+        assert_eq!(config.ui.unfocused_pane_opacity, 0.7);
+        assert_eq!(config.ui.unfocused_pane_fill, "#11111b");
+
+        // Whole numbers are valid opacities too.
+        let config: Config = toml::from_str("[ui]\nunfocused_pane_opacity = 1\n").unwrap();
+        assert_eq!(config.ui.unfocused_pane_opacity, 1.0);
     }
 
     #[test]

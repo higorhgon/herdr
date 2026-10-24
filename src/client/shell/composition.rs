@@ -20,6 +20,39 @@ fn restore_mode_bar(
 }
 
 impl ClientShellState {
+    /// Fades the panes that do not have focus, like Ghostty's unfocused splits.
+    /// An open popup holds the focus, so every pane under it fades.
+    fn dim_unfocused_panes(
+        &self,
+        frame: &mut FrameData,
+        surface: &crate::protocol::PaneSurfaceFrame,
+        origin: Rect,
+    ) {
+        let dim = self.config.unfocused_pane_dim;
+        let popup_open = surface.popup.is_some();
+        if !dim.is_enabled() || (surface.panes.len() < 2 && !popup_open) {
+            return;
+        }
+        let place = |rect: crate::protocol::SurfaceRect| {
+            Rect::new(
+                origin.x.saturating_add(rect.x),
+                origin.y.saturating_add(rect.y),
+                rect.width,
+                rect.height,
+            )
+        };
+        for pane in surface
+            .panes
+            .iter()
+            .filter(|pane| popup_open || !pane.focused)
+        {
+            dim.apply(frame, place(pane.inner_rect), &self.host_colors);
+            if let Some(scrollbar) = pane.scrollbar_rect {
+                dim.apply(frame, place(scrollbar), &self.host_colors);
+            }
+        }
+    }
+
     fn compose_unavailable(&mut self, cols: u16, rows: u16) -> FrameData {
         let layout = self.layout(cols, rows);
         let mut buffer = Buffer::empty(Rect::new(0, 0, cols, rows));
@@ -344,6 +377,7 @@ impl ClientShellState {
             frame.cells[start..start + usize::from(bar.width)].to_vec()
         });
         blit_pane_surface(&mut frame, &surface.frame, layout.pane_surface);
+        self.dim_unfocused_panes(&mut frame, surface, layout.pane_surface);
         restore_mode_bar(&mut frame, mode_bar, mode_bar_cells.as_deref());
         let mut occlusion = crate::kitty_graphics::surface::Occlusion::default();
         let has_selection = self

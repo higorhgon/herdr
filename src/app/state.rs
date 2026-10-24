@@ -545,6 +545,8 @@ impl Palette {
             "rose-pine" => Some(Self::rose_pine()),
             "rose-pine-dawn" => Some(Self::rose_pine_dawn()),
             "vesper" => Some(Self::vesper()),
+            // Follows the current Omarchy theme; without Omarchy it is the terminal theme.
+            "omarchy" => Some(crate::omarchy::palette().unwrap_or_else(Self::terminal)),
             _ => None,
         }
     }
@@ -1413,7 +1415,8 @@ mod tests {
         for name in crate::config::THEME_NAMES
             .iter()
             .copied()
-            .filter(|name| *name != "terminal")
+            // These two take their colors from outside Herdr.
+            .filter(|name| !matches!(*name, "terminal" | "omarchy"))
         {
             let palette = Palette::from_name(name).unwrap();
             let background_contrast = contrast_ratio(palette.panel_bg, palette.active_row_bg);
@@ -1435,7 +1438,8 @@ mod tests {
         for name in crate::config::THEME_NAMES
             .iter()
             .copied()
-            .filter(|name| *name != "terminal")
+            // These two take their colors from outside Herdr.
+            .filter(|name| !matches!(*name, "terminal" | "omarchy"))
         {
             let palette = Palette::from_name(name).unwrap();
             let background_contrast = contrast_ratio(palette.panel_bg, palette.selection_bg);

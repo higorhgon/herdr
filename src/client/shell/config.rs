@@ -68,6 +68,18 @@ impl ClientShellState {
         }
     }
 
+    /// Resolves the theme again for colors that live outside the config file,
+    /// such as the current Omarchy theme. Returns whether the palette changed.
+    pub(crate) fn refresh_theme_palette(&mut self) -> bool {
+        let palette =
+            crate::app::client_palette_for_host(&self.config.theme_runtime, self.host_appearance);
+        if palette == self.config.palette {
+            return false;
+        }
+        self.config.palette = palette;
+        true
+    }
+
     pub(crate) fn reload_client_config(&mut self) {
         match crate::config::load_live_config() {
             Ok(loaded) => {
@@ -151,6 +163,10 @@ impl ClientShellConfig {
             mouse_scroll_lines: config.ui.mouse_scroll_lines(),
             right_click_passthrough_modifiers: config.ui.right_click_passthrough_modifiers(),
             redraw_on_focus_gained: config.ui.redraw_on_focus_gained,
+            unfocused_pane_dim: super::pane_dim::UnfocusedPaneDim::new(
+                config.ui.unfocused_pane_opacity,
+                &config.ui.unfocused_pane_fill,
+            ),
             switch_ascii_input_source_in_prefix: config
                 .experimental
                 .switch_ascii_input_source_in_prefix,
@@ -366,6 +382,10 @@ impl ClientShellConfig {
                 self.mouse_scroll_lines = ui.mouse_scroll_lines();
                 self.right_click_passthrough_modifiers = ui.right_click_passthrough_modifiers();
                 self.redraw_on_focus_gained = ui.redraw_on_focus_gained;
+                self.unfocused_pane_dim = super::pane_dim::UnfocusedPaneDim::new(
+                    ui.unfocused_pane_opacity,
+                    &ui.unfocused_pane_fill,
+                );
             }
         }
 

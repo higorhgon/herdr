@@ -665,6 +665,15 @@ async fn run_client_loop(
     let mut pending_catalog: Option<Result<Vec<endpoint::SavedSshEndpoint>, String>> = None;
     if state.shell.is_some() && !is_remote_client && state.attach_escape.is_none() {
         catalog_reload::watch_profiles(event_tx.clone(), should_quit.clone());
+        let omarchy_tx = event_tx.clone();
+        let omarchy_quit = should_quit.clone();
+        crate::omarchy::watch_theme("herdr-client-omarchy-theme", move || {
+            !omarchy_quit.load(Ordering::Acquire)
+                && !matches!(
+                    omarchy_tx.try_send(ClientLoopEvent::OmarchyThemeChanged),
+                    Err(tokio::sync::mpsc::error::TrySendError::Closed(_))
+                )
+        });
     }
 
     // This (foreground) client owns the prefix ASCII input-source switch
@@ -825,6 +834,20 @@ async fn run_client_loop(
 
         match event {
             ClientLoopEvent::EndpointCatalog(reload) => pending_catalog = Some(reload),
+            ClientLoopEvent::OmarchyThemeChanged => {
+                // The terminal is retinted along with the theme, so its colors
+                // are asked again for selections and unfocused pane dimming.
+                query_host_terminal_theme();
+                if let Some(shell) = state.shell.as_mut() {
+                    if shell.refresh_theme_palette() {
+                        if let Some(frame) =
+                            shell.compose(state.reported_size.0, state.reported_size.1)
+                        {
+                            state.present_frame(frame);
+                        }
+                    }
+                }
+            }
             #[cfg(unix)]
             ClientLoopEvent::StdinInput(data) => {
                 let image_bridge_active = endpoint_accepts_local_images(

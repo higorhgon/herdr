@@ -44,7 +44,7 @@
           "key": "theme.name",
           "type": "string",
           "default": "\"catppuccin\"",
-          "description": "Built-in theme name."
+          "description": "Built-in theme name. omarchy follows the current Omarchy theme and switches along with it."
         },
         {
           "key": "theme.auto_switch",
@@ -992,6 +992,18 @@
           "type": "boolean",
           "default": "true",
           "description": "Keep split panes visually separated instead of sharing divider borders."
+        },
+        {
+          "key": "ui.unfocused_pane_opacity",
+          "type": "number",
+          "default": "1",
+          "description": "Opacity of unfocused split panes, like Ghostty's unfocused-split-opacity. Their colors fade toward ui.unfocused_pane_fill by the remainder; 0.7 matches Ghostty. Clamped to 0.15 through 1, and 1 turns dimming off."
+        },
+        {
+          "key": "ui.unfocused_pane_fill",
+          "type": "color",
+          "default": "\"\"",
+          "description": "Color unfocused panes fade toward, like Ghostty's unfocused-split-fill. Accepts the same colors as theme tokens. Empty uses the terminal background, which keeps translucent terminal windows translucent."
         },
         {
           "key": "ui.show_agent_labels_on_pane_borders",

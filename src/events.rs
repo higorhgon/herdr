@@ -173,6 +173,8 @@ pub enum AppEvent {
         activated: Vec<crate::detect::Agent>,
         status: crate::detect::manifest_update::ManifestUpdateStatus,
     },
+    /// The current Omarchy theme changed on disk.
+    OmarchyThemeChanged,
     /// A pane child emitted one or more executable BEL characters.
     /// The host-facing process forwards them to its outer terminal.
     TerminalBell { pane_id: PaneId, count: u16 },
