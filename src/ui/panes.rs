@@ -597,9 +597,9 @@ fn render_pane_borders(
         let cell = &mut buf[(x, y)];
         cell.set_symbol(symbol);
         let color = if focused {
-            app.palette.accent
+            app.palette.pane_border_focused()
         } else {
-            app.palette.overlay0
+            app.palette.pane_border()
         };
         cell.set_style(Style::default().fg(color));
     }
@@ -764,9 +764,9 @@ fn render_pane_border_titles(
             continue;
         }
         let color = if info.is_focused {
-            app.palette.accent
+            app.palette.pane_border_focused()
         } else {
-            app.palette.overlay0
+            app.palette.pane_border()
         };
         let mut style = Style::default().fg(color);
         if info.is_focused {
@@ -1304,6 +1304,46 @@ mod tests {
         let buffer = terminal.backend().buffer();
         assert_eq!(buffer[(1, 1)].style().fg, Some(app.palette.accent));
         assert_eq!(buffer[(2, 1)].style().fg, Some(app.palette.overlay0));
+    }
+
+    #[test]
+    fn pane_border_colors_override_accent_and_overlay0_only_for_borders() {
+        let mut app = AppState::test_new();
+        app.pane_gaps = true;
+        app.palette.pane_border = Some(Color::Rgb(1, 2, 3));
+        app.palette.pane_border_focused = Some(Color::Rgb(4, 5, 6));
+        app.view.terminal_area = Rect::new(0, 0, 4, 3);
+        app.view.pane_infos = vec![
+            PaneInfo {
+                id: PaneId::from_raw(1),
+                rect: Rect::new(0, 0, 2, 3),
+                inner_rect: Rect::default(),
+                scrollbar_rect: None,
+                borders: Borders::ALL,
+                is_focused: true,
+            },
+            PaneInfo {
+                id: PaneId::from_raw(2),
+                rect: Rect::new(2, 0, 2, 3),
+                inner_rect: Rect::default(),
+                scrollbar_rect: None,
+                borders: Borders::ALL,
+                is_focused: false,
+            },
+        ];
+        let ws = Workspace::test_new("test");
+        let mut terminal =
+            ratatui::Terminal::new(ratatui::backend::TestBackend::new(4, 3)).unwrap();
+
+        terminal
+            .draw(|frame| render_view_pane_borders(&app, &ws, &[], frame))
+            .unwrap();
+
+        let buffer = terminal.backend().buffer();
+        assert_eq!(buffer[(1, 1)].style().fg, Some(Color::Rgb(4, 5, 6)));
+        assert_eq!(buffer[(2, 1)].style().fg, Some(Color::Rgb(1, 2, 3)));
+        assert_ne!(app.palette.accent, Color::Rgb(4, 5, 6));
+        assert_ne!(app.palette.overlay0, Color::Rgb(1, 2, 3));
     }
 
     #[tokio::test]

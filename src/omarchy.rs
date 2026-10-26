@@ -159,6 +159,8 @@ impl OmarchyColors {
             blue: rgb(blue),
             teal: rgb(cyan),
             peach: rgb(orange),
+            pane_border: None,
+            pane_border_focused: None,
         }
     }
 }

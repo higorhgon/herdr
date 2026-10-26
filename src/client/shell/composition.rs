@@ -610,7 +610,10 @@ impl ClientShellState {
                 let mut composed = frame.to_ratatui_buffer()?;
                 let block = ratatui::widgets::Block::default()
                     .borders(ratatui::widgets::Borders::ALL)
-                    .border_style(ratatui::style::Style::default().fg(self.config.palette.accent))
+                    .border_style(
+                        ratatui::style::Style::default()
+                            .fg(self.config.palette.pane_border_focused()),
+                    )
                     .title(popup.title.clone())
                     .style(ratatui::style::Style::default().bg(self.config.palette.panel_bg));
                 ratatui::widgets::Widget::render(

@@ -121,6 +121,10 @@ pub struct CustomThemeColors {
     pub blue: Option<String>,
     pub teal: Option<String>,
     pub peach: Option<String>,
+    /// Borders of unfocused panes. Default: overlay0.
+    pub pane_border: Option<String>,
+    /// Border of the focused pane. Default: accent.
+    pub pane_border_focused: Option<String>,
     /// Overrides applied when `auto_switch` selects a light appearance.
     pub light: Option<ModeThemeColors>,
     /// Overrides applied when `auto_switch` selects a dark appearance.
@@ -150,6 +154,10 @@ pub struct ModeThemeColors {
     pub blue: Option<String>,
     pub teal: Option<String>,
     pub peach: Option<String>,
+    /// Borders of unfocused panes. Default: overlay0.
+    pub pane_border: Option<String>,
+    /// Border of the focused pane. Default: accent.
+    pub pane_border_focused: Option<String>,
 }
 
 /// Parse a color string into a ratatui Color.
@@ -312,6 +320,36 @@ red = "rgb(255, 85, 85)"
         assert_eq!(custom.accent.as_deref(), Some("#ff79c6"));
         assert_eq!(custom.red.as_deref(), Some("rgb(255, 85, 85)"));
         assert!(custom.green.is_none());
+
+        let config: Config = toml::from_str(
+            r##"
+[theme.custom]
+pane_border = "#38394b"
+pane_border_focused = "blue"
+
+[theme.custom.dark]
+pane_border = "#101010"
+"##,
+        )
+        .unwrap();
+        let custom = config.theme.custom.as_ref().unwrap();
+        assert_eq!(custom.pane_border.as_deref(), Some("#38394b"));
+        assert_eq!(custom.pane_border_focused.as_deref(), Some("blue"));
+        let palette = crate::app::state::Palette::catppuccin().with_overrides(custom);
+        assert_eq!(
+            palette.pane_border(),
+            ratatui::style::Color::Rgb(0x38, 0x39, 0x4b)
+        );
+        assert_eq!(palette.pane_border_focused(), ratatui::style::Color::Blue);
+        assert_eq!(
+            palette.accent,
+            crate::app::state::Palette::catppuccin().accent
+        );
+        let dark = custom.dark.as_ref().unwrap();
+        assert_eq!(
+            palette.with_mode_overrides(dark).pane_border(),
+            ratatui::style::Color::Rgb(0x10, 0x10, 0x10)
+        );
     }
 
     #[test]

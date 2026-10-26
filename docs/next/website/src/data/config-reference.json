@@ -179,6 +179,18 @@
           "description": "Override the peach color token on top of the base theme. Accepts hex, named colors, rgb(r,g,b), or reset aliases."
         },
         {
+          "key": "theme.custom.pane_border",
+          "type": "color",
+          "default": "unset",
+          "description": "Color of unfocused pane borders on top of the base theme, without changing overlay0 elsewhere. Unset uses overlay0. Accepts hex, named colors, rgb(r,g,b), or reset aliases."
+        },
+        {
+          "key": "theme.custom.pane_border_focused",
+          "type": "color",
+          "default": "unset",
+          "description": "Color of the focused pane border on top of the base theme, without changing the accent elsewhere. Unset uses accent. Accepts hex, named colors, rgb(r,g,b), or reset aliases."
+        },
+        {
           "key": "theme.custom.light.accent",
           "type": "color",
           "default": "unset",
@@ -293,6 +305,18 @@
           "description": "Override the peach color token when auto_switch selects a light appearance. Applied after theme.custom. Accepts hex, named colors, rgb(r,g,b), or reset aliases."
         },
         {
+          "key": "theme.custom.light.pane_border",
+          "type": "color",
+          "default": "unset",
+          "description": "Color of unfocused pane borders when auto_switch selects a light appearance, without changing overlay0 elsewhere. Unset uses overlay0. Applied after theme.custom. Accepts hex, named colors, rgb(r,g,b), or reset aliases."
+        },
+        {
+          "key": "theme.custom.light.pane_border_focused",
+          "type": "color",
+          "default": "unset",
+          "description": "Color of the focused pane border when auto_switch selects a light appearance, without changing the accent elsewhere. Unset uses accent. Applied after theme.custom. Accepts hex, named colors, rgb(r,g,b), or reset aliases."
+        },
+        {
           "key": "theme.custom.dark.accent",
           "type": "color",
           "default": "unset",
@@ -405,6 +429,18 @@
           "type": "color",
           "default": "unset",
           "description": "Override the peach color token when auto_switch selects a dark appearance. Applied after theme.custom. Accepts hex, named colors, rgb(r,g,b), or reset aliases."
+        },
+        {
+          "key": "theme.custom.dark.pane_border",
+          "type": "color",
+          "default": "unset",
+          "description": "Color of unfocused pane borders when auto_switch selects a dark appearance, without changing overlay0 elsewhere. Unset uses overlay0. Applied after theme.custom. Accepts hex, named colors, rgb(r,g,b), or reset aliases."
+        },
+        {
+          "key": "theme.custom.dark.pane_border_focused",
+          "type": "color",
+          "default": "unset",
+          "description": "Color of the focused pane border when auto_switch selects a dark appearance, without changing the accent elsewhere. Unset uses accent. Applied after theme.custom. Accepts hex, named colors, rgb(r,g,b), or reset aliases."
         }
       ]
     },
