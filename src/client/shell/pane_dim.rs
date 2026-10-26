@@ -45,6 +45,20 @@ impl UnfocusedPaneDim {
 
     /// Dims the cells of `area` in `frame`.
     pub(crate) fn apply(self, frame: &mut FrameData, area: Rect, host: &TerminalTheme) {
+        let width = usize::from(frame.width);
+        let left = usize::from(area.x.min(frame.width));
+        let right = usize::from(area.right().min(frame.width));
+        let bottom = area.bottom().min(frame.height);
+        for y in area.y..bottom {
+            let row = usize::from(y) * width;
+            if let Some(cells) = frame.cells.get_mut(row + left..row + right) {
+                self.apply_cells(cells, host);
+            }
+        }
+    }
+
+    /// Dims a run of cells, such as one row of a retained pane surface patch.
+    pub(crate) fn apply_cells(self, cells: &mut [crate::protocol::CellData], host: &TerminalTheme) {
         if !self.is_enabled() {
             return;
         }
@@ -58,21 +72,12 @@ impl UnfocusedPaneDim {
             host,
             last: [None; 2],
         });
-        let width = usize::from(frame.width);
-        let right = area.right().min(frame.width);
-        let bottom = area.bottom().min(frame.height);
-        for y in area.y..bottom {
-            let row = usize::from(y) * width;
-            for x in area.x..right {
-                let Some(cell) = frame.cells.get_mut(row + usize::from(x)) else {
-                    continue;
-                };
-                match blender.as_mut() {
-                    Some(blender) => self.dim_cell(cell, blender),
-                    // Without the target color there is nothing to blend toward;
-                    // the terminal's faint attribute is the closest stand-in.
-                    None => cell.modifier |= Modifier::DIM.bits(),
-                }
+        for cell in cells {
+            match blender.as_mut() {
+                Some(blender) => self.dim_cell(cell, blender),
+                // Without the target color there is nothing to blend toward;
+                // the terminal's faint attribute is the closest stand-in.
+                None => cell.modifier |= Modifier::DIM.bits(),
             }
         }
     }

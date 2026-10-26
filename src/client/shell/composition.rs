@@ -29,10 +29,6 @@ impl ClientShellState {
         origin: Rect,
     ) {
         let dim = self.config.unfocused_pane_dim;
-        let popup_open = surface.popup.is_some();
-        if !dim.is_enabled() || (surface.panes.len() < 2 && !popup_open) {
-            return;
-        }
         let place = |rect: crate::protocol::SurfaceRect| {
             Rect::new(
                 origin.x.saturating_add(rect.x),
@@ -44,13 +40,24 @@ impl ClientShellState {
         for pane in surface
             .panes
             .iter()
-            .filter(|pane| popup_open || !pane.focused)
+            .filter(|pane| self.pane_is_dimmed(surface, pane))
         {
             dim.apply(frame, place(pane.inner_rect), &self.host_colors);
             if let Some(scrollbar) = pane.scrollbar_rect {
                 dim.apply(frame, place(scrollbar), &self.host_colors);
             }
         }
+    }
+
+    /// Whether `pane` of `surface` fades as an unfocused pane.
+    pub(super) fn pane_is_dimmed(
+        &self,
+        surface: &crate::protocol::PaneSurfaceFrame,
+        pane: &crate::protocol::PaneSurfacePane,
+    ) -> bool {
+        let popup_open = surface.popup.is_some();
+        self.config.unfocused_pane_dim.is_enabled()
+            && (popup_open || (surface.panes.len() > 1 && !pane.focused))
     }
 
     fn compose_unavailable(&mut self, cols: u16, rows: u16) -> FrameData {

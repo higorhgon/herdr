@@ -87,3 +87,58 @@ fn dimming_stays_off_by_default_and_for_a_lone_pane() {
         crate::protocol::color_to_u32(Color::Reset)
     );
 }
+
+#[test]
+fn retained_patches_keep_unfocused_panes_faded() {
+    let mut state = dimmed_state(0.7, split_surface());
+    let composed = state.compose(106, 20).expect("composed frame");
+    let layout = state.layout(106, 20);
+    let current = state.pane_surface.clone().expect("pane surface");
+    let cell = crate::protocol::CellData {
+        symbol: "N".into(),
+        fg: 0,
+        bg: 0,
+        modifier: 0,
+        skip: false,
+        hyperlink: None,
+    };
+    // One row in each pane: x 0..2 is the focused pane, x 2..4 the other.
+    let patch = crate::protocol::PaneSurfacePatch {
+        boot_id: current.boot_id.clone(),
+        projection_revision: current.projection_revision,
+        base_surface_revision: current.surface_revision,
+        surface_revision: current.surface_revision + 1,
+        rows: vec![
+            crate::protocol::PaneSurfacePatchRow {
+                x: 0,
+                y: 0,
+                cells: vec![cell.clone(); 2],
+            },
+            crate::protocol::PaneSurfacePatchRow {
+                x: 2,
+                y: 0,
+                cells: vec![cell; 2],
+            },
+        ],
+        panes: current.panes.clone(),
+        cursor: None,
+    };
+
+    let ClientPaneSurfacePatchOutcome::Applied(Some(patch)) = state.apply_pane_surface_patch(patch)
+    else {
+        panic!("expected fast retained patch");
+    };
+    let patched = apply_composed_surface_patch(&composed, patch).expect("apply composed patch");
+    let at = |x: u16| {
+        &patched.cells[usize::from(layout.pane_surface.y) * usize::from(patched.width)
+            + usize::from(layout.pane_surface.x + x)]
+    };
+
+    assert_eq!(at(0).symbol, "N");
+    assert_eq!(at(0).fg, crate::protocol::color_to_u32(Color::Reset));
+    assert_eq!(at(2).symbol, "N");
+    assert_eq!(
+        at(2).fg,
+        crate::protocol::color_to_u32(Color::Rgb(140, 140, 140))
+    );
+}

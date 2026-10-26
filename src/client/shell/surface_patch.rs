@@ -106,6 +106,27 @@ fn pane_geometry_matches(
 }
 
 impl ClientShellState {
+    /// Whether a patch row, in surface coordinates, lies in a pane that fades.
+    /// Patch rows never cross a pane: each lies in one pane's terminal area or
+    /// scrollbar.
+    fn patch_row_is_dimmed(
+        &self,
+        surface: &crate::protocol::PaneSurfaceFrame,
+        row: &crate::protocol::PaneSurfacePatchRow,
+    ) -> bool {
+        let contains = |rect: crate::protocol::SurfaceRect| {
+            row.x >= rect.x
+                && row.x < rect.x.saturating_add(rect.width)
+                && row.y >= rect.y
+                && row.y < rect.y.saturating_add(rect.height)
+        };
+        surface
+            .panes
+            .iter()
+            .find(|pane| contains(pane.inner_rect) || pane.scrollbar_rect.is_some_and(contains))
+            .is_some_and(|pane| self.pane_is_dimmed(surface, pane))
+    }
+
     pub(crate) fn apply_pane_surface_patch(
         &mut self,
         patch: crate::protocol::PaneSurfacePatch,
@@ -180,10 +201,20 @@ impl ClientShellState {
             rows: patch
                 .rows
                 .iter()
-                .map(|row| crate::protocol::PaneSurfacePatchRow {
-                    x: area.x.saturating_add(row.x),
-                    y: area.y.saturating_add(row.y),
-                    cells: row.cells.clone(),
+                .map(|row| {
+                    let mut cells = row.cells.clone();
+                    // Rows go straight to the screen here, past compose, so
+                    // unfocused panes fade on this path too.
+                    if self.patch_row_is_dimmed(current, row) {
+                        self.config
+                            .unfocused_pane_dim
+                            .apply_cells(&mut cells, &self.host_colors);
+                    }
+                    crate::protocol::PaneSurfacePatchRow {
+                        x: area.x.saturating_add(row.x),
+                        y: area.y.saturating_add(row.y),
+                        cells,
+                    }
                 })
                 .collect(),
             cursor: patch
