@@ -142,3 +142,33 @@ fn retained_patches_keep_unfocused_panes_faded() {
         crate::protocol::color_to_u32(Color::Rgb(140, 140, 140))
     );
 }
+
+fn backdrop_cell(opacity: f32) -> crate::protocol::CellData {
+    let mut state = dimmed_state(opacity, split_surface());
+    state.overlay = Some(ClientShellOverlay::Help(ClientHelpOverlay {
+        query: TextEditor::default(),
+        search_focused: true,
+        scroll: 0,
+    }));
+    let frame = state.compose(240, 80).expect("composed frame");
+    let pane = state.hits.panes[0].clone();
+    frame.cells
+        [usize::from(pane.inner_rect.y) * usize::from(frame.width) + usize::from(pane.inner_rect.x)]
+    .clone()
+}
+
+#[test]
+fn modals_fade_their_backdrop_like_unfocused_panes() {
+    // Even the focused pane fades behind a modal, by blending, not faint text.
+    let cell = backdrop_cell(0.7);
+    assert_eq!(
+        cell.fg,
+        crate::protocol::color_to_u32(Color::Rgb(140, 140, 140))
+    );
+    assert_eq!(cell.modifier & Modifier::DIM.bits(), 0);
+
+    // With dimming off, modals keep Herdr's faint backdrop.
+    let cell = backdrop_cell(1.0);
+    assert_eq!(cell.fg, crate::protocol::color_to_u32(Color::Reset));
+    assert_ne!(cell.modifier & Modifier::DIM.bits(), 0);
+}

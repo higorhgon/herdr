@@ -684,6 +684,14 @@ impl ClientShellState {
             occlusion.cover(bar);
         }
         if let Some(overlay) = self.overlay.as_ref() {
+            // Modals fade what is behind them the way unfocused panes fade,
+            // when that dimming is on; otherwise the overlay uses faint text.
+            let dim = self.config.unfocused_pane_dim;
+            let blend_backdrop = dim.is_enabled() && render::overlay_dims_backdrop(overlay);
+            if blend_backdrop {
+                let area = Rect::new(0, 0, frame.width, frame.height);
+                dim.apply(&mut frame, area, &self.host_colors);
+            }
             let mut composed = frame.to_ratatui_buffer()?;
             let cursor = if let ClientShellOverlay::ContextMenu(menu) = overlay {
                 let rendered =
@@ -711,6 +719,7 @@ impl ClientShellState {
                     &self.active_endpoint_id,
                     &self.config.keybinds,
                     &self.config.palette,
+                    !blend_backdrop,
                 )?;
                 occlusion.cover(rendered.area);
                 self.hits.overlay_primary = rendered.primary;

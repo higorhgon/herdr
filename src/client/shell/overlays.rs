@@ -33,6 +33,18 @@ pub(crate) struct OverlayRender {
     pub(crate) cursor: Option<crate::protocol::CursorState>,
 }
 
+/// Whether `o` fades what is behind it.
+pub(crate) fn overlay_dims_backdrop(o: &ClientShellOverlay) -> bool {
+    !matches!(
+        o,
+        ClientShellOverlay::Navigator(_)
+            | ClientShellOverlay::ContextMenu(_)
+            | ClientShellOverlay::GlobalMenu(_)
+    )
+}
+
+/// `faint_backdrop` is false when the caller already faded the backdrop.
+#[allow(clippy::too_many_arguments)] // one more flag on the existing overlay inputs
 pub(crate) fn render_client_overlay(
     b: &mut Buffer,
     o: &ClientShellOverlay,
@@ -41,13 +53,9 @@ pub(crate) fn render_client_overlay(
     active_endpoint_id: &ClientEndpointId,
     k: &LiveKeybindConfig,
     p: &Palette,
+    faint_backdrop: bool,
 ) -> Option<OverlayRender> {
-    if !matches!(
-        o,
-        ClientShellOverlay::Navigator(_)
-            | ClientShellOverlay::ContextMenu(_)
-            | ClientShellOverlay::GlobalMenu(_)
-    ) {
+    if faint_backdrop && overlay_dims_backdrop(o) {
         for y in b.area.y..b.area.bottom() {
             for x in b.area.x..b.area.right() {
                 let c = &mut b[(x, y)];
