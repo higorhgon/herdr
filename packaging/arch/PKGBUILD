@@ -71,23 +71,17 @@ prepare() {
 		git -c user.name=makepkg -c user.email=makepkg@localhost \
 			cherry-pick --allow-empty --keep-redundant-commits "${_commits[@]}"
 	fi
-
-	export RUSTUP_TOOLCHAIN=stable
-	cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
-
-	# Zig packages download here, so build() runs offline
-	export ZIG_GLOBAL_CACHE_DIR="${srcdir}/zig-cache"
-	cd vendor/libghostty-vt
-	"${srcdir}/zig/ziglang/zig" build --fetch=all
 }
 
+# Downloads stay out of prepare(): the arch-repo runs it with --nodeps just to
+# learn pkgver, before rust is installed.
 build() {
 	cd "${_srcname}"
 	export RUSTUP_TOOLCHAIN=stable
 	export CARGO_TARGET_DIR=target
 	export ZIG="${srcdir}/zig/ziglang/zig"
 	export ZIG_GLOBAL_CACHE_DIR="${srcdir}/zig-cache"
-	cargo build --frozen --release
+	cargo build --locked --release
 
 	mkdir -p completions
 	for _shell in bash fish zsh; do
